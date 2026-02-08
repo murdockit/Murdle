@@ -21,6 +21,7 @@ db.exec(`
     weapons TEXT NOT NULL,
     locations TEXT NOT NULL,
     grid TEXT DEFAULT '{}',
+    solution TEXT DEFAULT '{}',
     createdAt TEXT NOT NULL
   )
 `);
@@ -34,7 +35,8 @@ app.get('/api/mysteries', (req, res) => {
     suspects: JSON.parse(m.suspects),
     weapons: JSON.parse(m.weapons),
     locations: JSON.parse(m.locations),
-    grid: JSON.parse(m.grid)
+    grid: JSON.parse(m.grid),
+    solution: JSON.parse(m.solution || '{}')
   }));
   res.json(parsed);
 });
@@ -49,7 +51,8 @@ app.get('/api/mysteries/:id', (req, res) => {
     suspects: JSON.parse(mystery.suspects),
     weapons: JSON.parse(mystery.weapons),
     locations: JSON.parse(mystery.locations),
-    grid: JSON.parse(mystery.grid)
+    grid: JSON.parse(mystery.grid),
+    solution: JSON.parse(mystery.solution || '{}')
   };
   res.json(parsed);
 });
@@ -63,8 +66,8 @@ app.post('/api/mysteries', (req, res) => {
 
   const createdAt = new Date().toISOString();
   const stmt = db.prepare(`
-    INSERT INTO mysteries (title, description, suspects, weapons, locations, grid, createdAt)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO mysteries (title, description, suspects, weapons, locations, grid, solution, createdAt)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
   `);
 
   const result = stmt.run(
@@ -73,6 +76,7 @@ app.post('/api/mysteries', (req, res) => {
     JSON.stringify(suspects),
     JSON.stringify(weapons),
     JSON.stringify(locations),
+    JSON.stringify({}),
     JSON.stringify({}),
     createdAt
   );
@@ -85,6 +89,7 @@ app.post('/api/mysteries', (req, res) => {
     weapons,
     locations,
     grid: {},
+    solution: {},
     createdAt
   };
 
@@ -107,7 +112,30 @@ app.put('/api/mysteries/:id/grid', (req, res) => {
     suspects: JSON.parse(updated.suspects),
     weapons: JSON.parse(updated.weapons),
     locations: JSON.parse(updated.locations),
-    grid: JSON.parse(updated.grid)
+    grid: JSON.parse(updated.grid),
+    solution: JSON.parse(updated.solution || '{}')
+  };
+  res.json(parsed);
+});
+
+// API: update solution
+app.put('/api/mysteries/:id/solution', (req, res) => {
+  const id = parseInt(req.params.id);
+  const mystery = db.prepare('SELECT * FROM mysteries WHERE id = ?').get(id);
+  if (!mystery) return res.status(404).json({ error: 'Mystery not found' });
+
+  const stmt = db.prepare('UPDATE mysteries SET solution = ? WHERE id = ?');
+  stmt.run(JSON.stringify(req.body.solution), id);
+
+  // Return updated mystery
+  const updated = db.prepare('SELECT * FROM mysteries WHERE id = ?').get(id);
+  const parsed = {
+    ...updated,
+    suspects: JSON.parse(updated.suspects),
+    weapons: JSON.parse(updated.weapons),
+    locations: JSON.parse(updated.locations),
+    grid: JSON.parse(updated.grid),
+    solution: JSON.parse(updated.solution || '{}')
   };
   res.json(parsed);
 });

@@ -255,6 +255,47 @@
     }
     .grid-cell.disabled:hover { background: #e0dcd4; }
 
+    /* ── Solution Section ── */
+    .solution-section {
+      margin-top: 32px;
+      padding: 24px;
+      background: #fff;
+      border: 3px solid #c0392b;
+    }
+    .solution-section h3 {
+      font-size: 18px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      margin-bottom: 16px;
+      color: #c0392b;
+    }
+    .solution-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+    }
+    .solution-item label {
+      display: block;
+      font-weight: bold;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 6px;
+    }
+    .solution-item select {
+      width: 100%;
+      padding: 10px 12px;
+      border: 2px solid #1a1a1a;
+      font-family: inherit;
+      font-size: 14px;
+      background: #fff;
+      cursor: pointer;
+    }
+    .solution-item select:focus {
+      outline: none;
+      border-color: #c0392b;
+    }
+
     .puzzle-actions { margin-top: 24px; display: flex; gap: 12px; }
     .puzzle-actions .btn { color: #1a1a1a; border-color: #1a1a1a; }
     .puzzle-actions .btn:hover { background: #1a1a1a; color: #f5f0e8; }
@@ -355,6 +396,30 @@
         <span>Click to cycle: empty → <span class="x-demo">✕</span> → <span class="check-demo">✓</span> → empty</span>
       </div>
 
+      <div class="solution-section">
+        <h3>Your Solution</h3>
+        <div class="solution-grid">
+          <div class="solution-item">
+            <label for="solution-suspect">Suspect</label>
+            <select id="solution-suspect" onchange="saveSolution()">
+              <option value="">Select suspect...</option>
+            </select>
+          </div>
+          <div class="solution-item">
+            <label for="solution-weapon">Weapon</label>
+            <select id="solution-weapon" onchange="saveSolution()">
+              <option value="">Select weapon...</option>
+            </select>
+          </div>
+          <div class="solution-item">
+            <label for="solution-location">Location</label>
+            <select id="solution-location" onchange="saveSolution()">
+              <option value="">Select location...</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
       <div class="puzzle-actions">
         <button class="btn" onclick="showListView()">← Back to Mysteries</button>
         <button class="btn clear-grid-btn" onclick="clearGrid()">Clear Grid</button>
@@ -408,6 +473,7 @@
         descEl.style.display = 'none';
       }
       buildGrid();
+      populateSolutionDropdowns();
     }
 
     // ─── Tag Management ───
@@ -513,6 +579,50 @@
       currentMystery.grid = {};
       saveGrid();
       buildGrid();
+    }
+
+    // ─── Solution Management ───
+    function populateSolutionDropdowns() {
+      if (!currentMystery) return;
+
+      // Populate suspects dropdown
+      const suspectSelect = document.getElementById('solution-suspect');
+      suspectSelect.innerHTML = '<option value="">Select suspect...</option>' +
+        currentMystery.suspects.map(s => `<option value="${esc(s)}">${esc(s)}</option>`).join('');
+
+      // Populate weapons dropdown
+      const weaponSelect = document.getElementById('solution-weapon');
+      weaponSelect.innerHTML = '<option value="">Select weapon...</option>' +
+        currentMystery.weapons.map(w => `<option value="${esc(w)}">${esc(w)}</option>`).join('');
+
+      // Populate locations dropdown
+      const locationSelect = document.getElementById('solution-location');
+      locationSelect.innerHTML = '<option value="">Select location...</option>' +
+        currentMystery.locations.map(l => `<option value="${esc(l)}">${esc(l)}</option>`).join('');
+
+      // Set current values if solution exists
+      const solution = currentMystery.solution || {};
+      if (solution.suspect) suspectSelect.value = solution.suspect;
+      if (solution.weapon) weaponSelect.value = solution.weapon;
+      if (solution.location) locationSelect.value = solution.location;
+    }
+
+    async function saveSolution() {
+      if (!currentMystery) return;
+
+      const solution = {
+        suspect: document.getElementById('solution-suspect').value || null,
+        weapon: document.getElementById('solution-weapon').value || null,
+        location: document.getElementById('solution-location').value || null
+      };
+
+      currentMystery.solution = solution;
+
+      await fetch(`/api/mysteries/${currentMystery.id}/solution`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ solution })
+      });
     }
 
     // ─── Grid Builder ───
