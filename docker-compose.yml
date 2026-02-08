@@ -1,0 +1,6 @@
+services:
+  murdle:
+    build: .
+    ports:
+      - "3020:3020"
+    restart: unless-stopped
